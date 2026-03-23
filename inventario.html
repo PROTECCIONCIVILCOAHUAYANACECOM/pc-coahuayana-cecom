@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PC Coahuayana">
+<meta name="theme-color" content="#1A3C6E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Inventario — Protección Civil Coahuayana</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1A3C6E; --blue2: #2563EB; --cyan: #0E7490;
+    --green: #065F46; --red: #991B1B; --amber: #854D0E;
+    --bg: #F3F4F6; --card: #ffffff; --border: #E5E7EB;
+    --text: #111827; --muted: #6B7280; --light: #F9FAFB;
+  }
+  body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--blue); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .sidebar-logo .org { font-size: 11px; color: #93C5FD; margin-bottom: 2px; }
+  .sidebar-logo .title { font-size: 13px; font-weight: bold; color: #fff; line-height: 1.3; }
+  .sidebar-logo .sub { font-size: 10px; color: #BFDBFE; margin-top: 2px; }
+  .nav { padding: 12px 0; flex: 1; }
+  .nav-section { font-size: 10px; color: #93C5FD; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 16px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; color: #CBD5E1; font-size: 12px; transition: background 0.15s; }
+  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,0.15); color: #fff; border-left: 3px solid #60A5FA; padding-left: 13px; }
+  .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px; color: #93C5FD; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-left h1 { font-size: 16px; font-weight: bold; color: var(--blue); }
+  .topbar-left p { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .date-badge { font-size: 11px; color: var(--muted); background: var(--light); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; }
+  .content { padding: 20px 24px; flex: 1; overflow-y: auto; }
+
+  /* STATS */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-card .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .stat-card .value { font-size: 26px; font-weight: bold; }
+  .stat-card .sub-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .stat-card.ok .value { color: var(--green); }
+  .stat-card.warn .value { color: var(--amber); }
+  .stat-card.danger .value { color: var(--red); }
+  .stat-card.info .value { color: var(--blue2); }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .toolbar input[type=text] { padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: var(--card); color: var(--text); width: 220px; outline: none; }
+  .toolbar input[type=text]:focus { border-color: var(--blue2); }
+  .toolbar select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: var(--card); color: var(--text); outline: none; cursor: pointer; }
+  .btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; cursor: pointer; font-family: Arial; transition: all 0.15s; }
+  .btn:hover { background: var(--light); }
+  .btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn.primary:hover { background: #0f2a50; }
+  .btn.success { background: #065F46; color: #fff; border-color: #065F46; }
+  .btn.danger-btn { background: #FEE2E2; color: var(--red); border-color: #FECACA; }
+  .spacer { flex: 1; }
+
+  /* TABLE */
+  .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .table-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-header span { font-size: 13px; font-weight: bold; color: var(--blue); }
+  .table-header small { font-size: 11px; color: var(--muted); }
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--blue); color: #fff; font-size: 11px; font-weight: bold; padding: 9px 12px; text-align: left; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #F0F7FF; }
+  tbody td { padding: 9px 12px; font-size: 12px; vertical-align: middle; }
+  .editable { cursor: pointer; }
+  .editable:hover { background: #EFF6FF; border-radius: 4px; padding: 2px 6px; }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
+  .badge.ok { background: #DCFCE7; color: #166534; }
+  .badge.warn { background: #FEF9C3; color: #854D0E; }
+  .badge.bad { background: #FEE2E2; color: #991B1B; }
+  .badge.blue { background: #DBEAFE; color: #1E40AF; }
+  .badge.gray { background: #F3F4F6; color: #374151; }
+  .alerta-ok { color: #166534; font-size: 11px; }
+  .alerta-warn { color: #854D0E; font-size: 11px; font-weight: bold; }
+  .alerta-bad { color: #991B1B; font-size: 11px; font-weight: bold; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--card); border-radius: 12px; padding: 24px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 15px; font-weight: bold; color: var(--blue); margin-bottom: 16px; border-bottom: 2px solid var(--blue); padding-bottom: 8px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: bold; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: Arial; color: var(--text); background: var(--card); outline: none; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue2); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+  /* MOVIMIENTOS */
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 14px; font-weight: bold; color: var(--blue); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+  /* NOTIF */
+  .notif { position: fixed; bottom: 20px; right: 20px; background: #065F46; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 12px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .notif.show { opacity: 1; }
+
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .toolbar input[type=text] { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="org">Coahuayana, Michoacán</div>
+      <div class="title">Protección Civil Municipal</div>
+      <div class="sub">Sistema de Gestión</div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Logística</div>
+      <div class="nav-item active" onclick="showPage('inventario')">
+        <span class="nav-icon">📦</span> Inventario
+      </div>
+      <div class="nav-item" onclick="showPage('movimientos')">
+        <span class="nav-icon">🔄</span> Movimientos
+      </div>
+      <div class="nav-item" onclick="showPage('resumen')">
+        <span class="nav-icon">📊</span> Resumen
+      </div>
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item" onclick="showPage('ayuda')">
+        <span class="nav-icon">❓</span> Ayuda
+      </div>
+    </div>
+    <div class="sidebar-footer">v1.0 — Uso interno</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div style="background:#1A3C6E;padding:8px 16px"><a href="index.html" style="color:#BFDBFE;font-size:12px;text-decoration:none">← Inicio · PC Coahuayana CECOM</a></div>
+<div class="topbar">
+      <div class="topbar-left">
+        <h1 id="page-title">Inventario de materiales y suministros</h1>
+        <p id="page-sub">Logística y Equipamiento — Protección Civil Municipal</p>
+      </div>
+      <div class="topbar-right">
+        <span class="date-badge" id="fecha-hoy"></span>
+        <button class="btn primary" onclick="openModal()">+ Nuevo artículo</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- PÁGINA: INVENTARIO -->
+      <div id="page-inventario">
+        <div class="stats" id="stats-cards"></div>
+        <div class="toolbar">
+          <input type="text" id="search" placeholder="🔍  Buscar artículo o código..." oninput="renderTabla()">
+          <select id="filtro-estado" onchange="renderTabla()">
+            <option value="">Todos los estados</option>
+            <option value="Bueno">Bueno</option>
+            <option value="Regular">Regular</option>
+            <option value="Malo">Malo</option>
+          </select>
+          <select id="filtro-alerta" onchange="renderTabla()">
+            <option value="">Todas las alertas</option>
+            <option value="alerta">Solo con alerta</option>
+          </select>
+          <div class="spacer"></div>
+          <button class="btn" onclick="exportarCSV()">⬇ Exportar CSV</button>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <span>Artículos registrados</span>
+            <small id="contador-items"></small>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Unidad</th>
+                  <th>Existencia</th>
+                  <th>Mínimo</th>
+                  <th>Ubicación</th>
+                  <th>Estado</th>
+                  <th>Custodio</th>
+                  <th>Alerta</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-inventario"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: MOVIMIENTOS -->
+      <div id="page-movimientos" style="display:none">
+        <div class="section">
+          <div class="section-title">
+            🔄 Registrar movimiento
+          </div>
+          <div class="table-card" style="padding:16px">
+            <div class="row2">
+              <div class="field"><label>Código del artículo</label><input type="text" id="mov-codigo" placeholder="MAT-001"></div>
+              <div class="field"><label>Fecha</label><input type="date" id="mov-fecha"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Tipo</label>
+                <select id="mov-tipo">
+                  <option value="Entrada">Entrada</option>
+                  <option value="Salida">Salida</option>
+                </select>
+              </div>
+              <div class="field"><label>Cantidad</label><input type="number" id="mov-cantidad" min="1" value="1"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Responsable</label><input type="text" id="mov-responsable"></div>
+              <div class="field"><label>Motivo</label><input type="text" id="mov-motivo"></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px">
+              <button class="btn success" onclick="guardarMovimiento()">Registrar movimiento</button>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">📋 Historial de movimientos</div>
+          <div class="table-card">
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th><th>Código</th><th>Descripción</th>
+                    <th>Tipo</th><th>Cantidad</th><th>Responsable</th><th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-movimientos"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: RESUMEN -->
+      <div id="page-resumen" style="display:none">
+        <div class="stats" id="resumen-cards" style="grid-template-columns:repeat(3,1fr)"></div>
+        <div style="margin-top:20px" class="table-card" style="padding:20px">
+          <div class="table-header"><span>Artículos que requieren atención</span></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr><th>Código</th><th>Descripción</th><th>Existencia</th><th>Mínimo</th><th>Estado</th><th>Alerta</th></tr>
+              </thead>
+              <tbody id="tbody-alertas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: AYUDA -->
+      <div id="page-ayuda" style="display:none">
+        <div class="table-card" style="padding:24px;max-width:640px">
+          <h2 style="color:var(--blue);font-size:15px;margin-bottom:16px">Cómo usar este sistema</h2>
+          <div style="line-height:2;color:#374151;font-size:13px">
+            <p><strong>📦 Inventario</strong> — Agrega, edita y consulta todos los artículos. Haz clic en cualquier valor para editarlo. La columna "Alerta" se actualiza automáticamente.</p><br>
+            <p><strong>🔄 Movimientos</strong> — Registra cada entrada o salida de material. El inventario se actualiza automáticamente al guardar un movimiento.</p><br>
+            <p><strong>📊 Resumen</strong> — Vista rápida de totales y artículos con alerta.</p><br>
+            <p><strong>💾 Los datos se guardan en este navegador.</strong> Para compartir con tu equipo, abre el archivo HTML en cada computadora o celular. Para una versión en la nube con múltiples usuarios simultáneos, se necesita un servidor web.</p><br>
+            <p><strong>⬇ Exportar CSV</strong> — Descarga el inventario como archivo CSV que puedes abrir en Excel o Google Sheets.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO / EDITAR ARTÍCULO -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-titulo">Nuevo artículo</h2>
+    <div class="row2">
+      <div class="field"><label>Código *</label><input type="text" id="f-codigo" placeholder="MAT-011"></div>
+      <div class="field"><label>Unidad *</label><input type="text" id="f-unidad" placeholder="Pza, Mts, Kg..."></div>
+    </div>
+    <div class="field"><label>Descripción *</label><input type="text" id="f-descripcion" placeholder="Nombre del artículo"></div>
+    <div class="row2">
+      <div class="field"><label>Existencia actual</label><input type="number" id="f-existencia" min="0" value="0"></div>
+      <div class="field"><label>Mínimo requerido</label><input type="number" id="f-minimo" min="0" value="0"></div>
+    </div>
+    <div class="field"><label>Ubicación en almacén</label><input type="text" id="f-ubicacion" placeholder="Almacén A, Bodega..."></div>
+    <div class="row2">
+      <div class="field"><label>Estado</label>
+        <select id="f-estado">
+          <option>Bueno</option><option>Regular</option><option>Malo</option>
+        </select>
+      </div>
+      <div class="field"><label>Custodio / Responsable</label><input type="text" id="f-custodio"></div>
+    </div>
+    <div class="field"><label>Observaciones</label><textarea id="f-obs" rows="2"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn primary" onclick="guardarArticulo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const KEY_INV = 'pcm_inventario';
+const KEY_MOV = 'pcm_movimientos';
+
+let items = [];
+let movimientos = [];
+let editId = null;
+let nextId = 100;
+
+const defaults = [
+  {id:1,codigo:'MAT-001',descripcion:'Extinguidor PQS 6kg',unidad:'Pza',existencia:4,minimo:2,ubicacion:'Almacén A',estado:'Bueno',custodio:'Responsable de área',obs:''},
+  {id:2,codigo:'MAT-002',descripcion:'Botiquín de primeros auxilios',unidad:'Pza',existencia:3,minimo:2,ubicacion:'Almacén A',estado:'Bueno',custodio:'Responsable de área',obs:''},
+  {id:3,codigo:'MAT-003',descripcion:'Linterna táctica',unidad:'Pza',existencia:6,minimo:4,ubicacion:'Almacén B',estado:'Regular',custodio:'Responsable de área',obs:''},
+  {id:4,codigo:'MAT-004',descripcion:'Radio de comunicación',unidad:'Pza',existencia:2,minimo:4,ubicacion:'Almacén B',estado:'Bueno',custodio:'Responsable de área',obs:'Requiere reposición'},
+  {id:5,codigo:'MAT-005',descripcion:'Cuerda de rescate 30m',unidad:'Pza',existencia:1,minimo:2,ubicacion:'Almacén C',estado:'Bueno',custodio:'Responsable de área',obs:'Stock crítico'},
+  {id:6,codigo:'MAT-006',descripcion:'Casco de protección',unidad:'Pza',existencia:8,minimo:5,ubicacion:'Almacén A',estado:'Bueno',custodio:'Responsable de área',obs:''},
+  {id:7,codigo:'MAT-007',descripcion:'Chaleco reflectante',unidad:'Pza',existencia:10,minimo:8,ubicacion:'Almacén A',estado:'Regular',custodio:'Responsable de área',obs:''},
+  {id:8,codigo:'MAT-008',descripcion:'Guantes de trabajo',unidad:'Par',existencia:5,minimo:6,ubicacion:'Almacén B',estado:'Bueno',custodio:'Responsable de área',obs:''},
+  {id:9,codigo:'MAT-009',descripcion:'Mascarilla respiratoria',unidad:'Pza',existencia:12,minimo:10,ubicacion:'Almacén C',estado:'Bueno',custodio:'Responsable de área',obs:''},
+  {id:10,codigo:'MAT-010',descripcion:'Manguera contra incendio',unidad:'Mts',existencia:50,minimo:30,ubicacion:'Almacén C',estado:'Malo',custodio:'Responsable de área',obs:'Programar reemplazo'},
+];
+
+function cargar() {
+  try {
+    const d = localStorage.getItem(KEY_INV);
+    if (d) { const p = JSON.parse(d); items = p.items; nextId = p.nextId||100; }
+    else items = JSON.parse(JSON.stringify(defaults));
+    const m = localStorage.getItem(KEY_MOV);
+    if (m) movimientos = JSON.parse(m);
+  } catch(e) { items = JSON.parse(JSON.stringify(defaults)); }
+}
+
+function guardar() {
+  try {
+    localStorage.setItem(KEY_INV, JSON.stringify({items, nextId}));
+    localStorage.setItem(KEY_MOV, JSON.stringify(movimientos));
+    notif('Guardado correctamente');
+  } catch(e) {}
+}
+
+function notif(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = '✓ ' + msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2000);
+}
+
+function alerta(item) {
+  if (item.estado === 'Malo') return {txt: '⚠ Mal estado', cls: 'alerta-bad'};
+  if (item.existencia < item.minimo) return {txt: '⚠ Stock bajo', cls: 'alerta-warn'};
+  return {txt: '✔ OK', cls: 'alerta-ok'};
+}
+
+function estadoBadge(e) {
+  if (e==='Bueno') return '<span class="badge ok">Bueno</span>';
+  if (e==='Regular') return '<span class="badge warn">Regular</span>';
+  return '<span class="badge bad">Malo</span>';
+}
+
+function renderStats() {
+  const total = items.length;
+  const buenos = items.filter(i=>i.estado==='Bueno').length;
+  const bajos = items.filter(i=>i.existencia<i.minimo).length;
+  const malos = items.filter(i=>i.estado==='Malo').length;
+  document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card info"><div class="label">Total artículos</div><div class="value">${total}</div><div class="sub-label">registrados</div></div>
+    <div class="stat-card ok"><div class="label">En buen estado</div><div class="value">${buenos}</div><div class="sub-label">artículos</div></div>
+    <div class="stat-card warn"><div class="label">Stock bajo</div><div class="value">${bajos}</div><div class="sub-label">requieren reposición</div></div>
+    <div class="stat-card danger"><div class="label">Mal estado</div><div class="value">${malos}</div><div class="sub-label">requieren atención</div></div>
+  `;
+}
+
+function renderTabla() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fe = document.getElementById('filtro-estado').value;
+  const fa = document.getElementById('filtro-alerta').value;
+  let list = items.filter(i => {
+    if (q && !i.descripcion.toLowerCase().includes(q) && !i.codigo.toLowerCase().includes(q)) return false;
+    if (fe && i.estado !== fe) return false;
+    if (fa==='alerta' && alerta(i).txt==='✔ OK') return false;
+    return true;
+  });
+  document.getElementById('contador-items').textContent = `${list.length} de ${items.length} artículos`;
+  const tbody = document.getElementById('tbody-inventario');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin resultados</td></tr>'; return; }
+  tbody.innerHTML = list.map(i => {
+    const a = alerta(i);
+    return `<tr>
+      <td><b>${i.codigo}</b></td>
+      <td>${i.descripcion}</td>
+      <td>${i.unidad}</td>
+      <td><b>${i.existencia}</b></td>
+      <td>${i.minimo}</td>
+      <td>${i.ubicacion}</td>
+      <td>${estadoBadge(i.estado)}</td>
+      <td>${i.custodio}</td>
+      <td class="${a.cls}">${a.txt}</td>
+      <td>
+        <button class="btn" style="padding:3px 8px;font-size:11px;margin-right:4px" onclick="editarArticulo(${i.id})">Editar</button>
+        <button class="btn danger-btn" style="padding:3px 8px;font-size:11px" onclick="eliminarArticulo(${i.id})">Eliminar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMovimientos() {
+  const tbody = document.getElementById('tbody-movimientos');
+  if (!movimientos.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Sin movimientos registrados</td></tr>'; return; }
+  tbody.innerHTML = [...movimientos].reverse().map(m => {
+    const item = items.find(i=>i.codigo===m.codigo);
+    return `<tr>
+      <td>${m.fecha}</td>
+      <td><b>${m.codigo}</b></td>
+      <td>${item?item.descripcion:'—'}</td>
+      <td><span class="badge ${m.tipo==='Entrada'?'ok':'blue'}">${m.tipo}</span></td>
+      <td>${m.cantidad}</td>
+      <td>${m.responsable}</td>
+      <td>${m.motivo}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderResumen() {
+  const total = items.length;
+  const buenos = items.filter(i=>i.estado==='Bueno').length;
+  const regular = items.filter(i=>i.estado==='Regular').length;
+  const malos = items.filter(i=>i.estado==='Malo').length;
+  const bajos = items.filter(i=>i.existencia<i.minimo).length;
+  const atencion = items.filter(i=>alerta(i).txt!=='✔ OK').length;
+  document.getElementById('resumen-cards').innerHTML = `
+    <div class="stat-card info"><div class="label">Total registrados</div><div class="value">${total}</div></div>
+    <div class="stat-card ok"><div class="label">Estado bueno</div><div class="value">${buenos}</div></div>
+    <div class="stat-card warn"><div class="label">Estado regular</div><div class="value">${regular}</div></div>
+    <div class="stat-card danger"><div class="label">Estado malo</div><div class="value">${malos}</div></div>
+    <div class="stat-card warn"><div class="label">Stock bajo</div><div class="value">${bajos}</div></div>
+    <div class="stat-card danger"><div class="label">Requieren atención</div><div class="value">${atencion}</div></div>
+  `;
+  const alertas = items.filter(i=>alerta(i).txt!=='✔ OK');
+  const tbody = document.getElementById('tbody-alertas');
+  if (!alertas.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin artículos con alerta</td></tr>'; return; }
+  tbody.innerHTML = alertas.map(i => {
+    const a = alerta(i);
+    return `<tr><td><b>${i.codigo}</b></td><td>${i.descripcion}</td><td>${i.existencia}</td><td>${i.minimo}</td><td>${estadoBadge(i.estado)}</td><td class="${a.cls}">${a.txt}</td></tr>`;
+  }).join('');
+}
+
+function openModal(id=null) {
+  editId = id;
+  const item = id ? items.find(i=>i.id===id) : null;
+  document.getElementById('modal-titulo').textContent = id ? 'Editar artículo' : 'Nuevo artículo';
+  document.getElementById('f-codigo').value = item ? item.codigo : '';
+  document.getElementById('f-unidad').value = item ? item.unidad : 'Pza';
+  document.getElementById('f-descripcion').value = item ? item.descripcion : '';
+  document.getElementById('f-existencia').value = item ? item.existencia : 0;
+  document.getElementById('f-minimo').value = item ? item.minimo : 0;
+  document.getElementById('f-ubicacion').value = item ? item.ubicacion : '';
+  document.getElementById('f-estado').value = item ? item.estado : 'Bueno';
+  document.getElementById('f-custodio').value = item ? item.custodio : '';
+  document.getElementById('f-obs').value = item ? item.obs : '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function cerrarModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function guardarArticulo() {
+  const obj = {
+    codigo: document.getElementById('f-codigo').value.trim(),
+    descripcion: document.getElementById('f-descripcion').value.trim(),
+    unidad: document.getElementById('f-unidad').value.trim(),
+    existencia: +document.getElementById('f-existencia').value,
+    minimo: +document.getElementById('f-minimo').value,
+    ubicacion: document.getElementById('f-ubicacion').value.trim(),
+    estado: document.getElementById('f-estado').value,
+    custodio: document.getElementById('f-custodio').value.trim(),
+    obs: document.getElementById('f-obs').value.trim(),
+  };
+  if (!obj.codigo || !obj.descripcion) { alert('Código y descripción son obligatorios'); return; }
+  if (editId) { Object.assign(items.find(i=>i.id===editId), obj); }
+  else { obj.id = nextId++; items.push(obj); }
+  guardar(); cerrarModal(); renderStats(); renderTabla();
+}
+
+function editarArticulo(id) { openModal(id); }
+
+function eliminarArticulo(id) {
+  if (!confirm('¿Eliminar este artículo?')) return;
+  items = items.filter(i=>i.id!==id);
+  guardar(); renderStats(); renderTabla();
+}
+
+function guardarMovimiento() {
+  const codigo = document.getElementById('mov-codigo').value.trim();
+  const fecha = document.getElementById('mov-fecha').value;
+  const tipo = document.getElementById('mov-tipo').value;
+  const cantidad = +document.getElementById('mov-cantidad').value;
+  const responsable = document.getElementById('mov-responsable').value.trim();
+  const motivo = document.getElementById('mov-motivo').value.trim();
+  if (!codigo || !fecha || !cantidad) { alert('Completa fecha, código y cantidad'); return; }
+  const item = items.find(i=>i.codigo===codigo);
+  if (!item) { alert('Código no encontrado en inventario'); return; }
+  if (tipo==='Salida' && item.existencia < cantidad) { alert('Existencia insuficiente'); return; }
+  if (tipo==='Entrada') item.existencia += cantidad;
+  else item.existencia -= cantidad;
+  movimientos.push({fecha, codigo, tipo, cantidad, responsable, motivo});
+  guardar(); renderMovimientos(); renderStats();
+  notif('Movimiento registrado');
+  document.getElementById('mov-codigo').value='';
+  document.getElementById('mov-cantidad').value=1;
+  document.getElementById('mov-responsable').value='';
+  document.getElementById('mov-motivo').value='';
+}
+
+function exportarCSV() {
+  const headers = ['Código','Descripción','Unidad','Existencia','Mínimo','Ubicación','Estado','Custodio','Alerta','Observaciones'];
+  const rows = items.map(i=>[i.codigo,i.descripcion,i.unidad,i.existencia,i.minimo,i.ubicacion,i.estado,i.custodio,alerta(i).txt,i.obs]);
+  const csv = [headers, ...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF'+csv);
+  a.download = 'Inventario_Coahuayana.csv';
+  a.click();
+}
+
+function showPage(page) {
+  ['inventario','movimientos','resumen','ayuda'].forEach(p => {
+    document.getElementById('page-'+p).style.display = p===page ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const titles = {inventario:'Inventario de materiales y suministros', movimientos:'Registro de movimientos', resumen:'Resumen y alertas', ayuda:'Ayuda y guía de uso'};
+  document.getElementById('page-title').textContent = titles[page];
+  if (page==='movimientos') renderMovimientos();
+  if (page==='resumen') renderResumen();
+  if (page==='inventario') { renderStats(); renderTabla(); }
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target===this) cerrarModal();
+});
+
+const hoy = new Date();
+document.getElementById('fecha-hoy').textContent = hoy.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+document.getElementById('mov-fecha').value = hoy.toISOString().split('T')[0];
+
+cargar();
+renderStats();
+renderTabla();
+</script>
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+</body>
+</html>
