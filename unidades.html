@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PC Coahuayana">
+<meta name="theme-color" content="#1A3C6E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Control de Unidades — Protección Civil Coahuayana</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #1A3C6E; --blue2: #2563EB; --cyan: #0E7490;
+  --green: #065F46; --red: #991B1B; --amber: #854D0E;
+  --bg: #F3F4F6; --card: #ffffff; --border: #E5E7EB;
+  --text: #111827; --muted: #6B7280; --light: #F9FAFB;
+}
+body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; min-height: 100vh; }
+.layout { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: 230px; background: var(--blue); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar-logo { padding: 18px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sidebar-logo .org { font-size: 10px; color: #93C5FD; margin-bottom: 2px; }
+.sidebar-logo .title { font-size: 13px; font-weight: bold; color: #fff; line-height: 1.3; }
+.sidebar-logo .sub { font-size: 10px; color: #BFDBFE; margin-top: 2px; }
+.nav { padding: 10px 0; flex: 1; }
+.nav-section { font-size: 10px; color: #93C5FD; text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 16px 4px; }
+.nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; color: #CBD5E1; font-size: 12px; transition: background 0.15s; }
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,0.15); color: #fff; border-left: 3px solid #60A5FA; padding-left: 13px; }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px; color: #93C5FD; }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.topbar-left h1 { font-size: 16px; font-weight: bold; color: var(--blue); }
+.topbar-left p { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.date-badge { font-size: 11px; color: var(--muted); background: var(--light); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; }
+.content { padding: 20px 24px; flex: 1; overflow-y: auto; }
+
+/* STATS */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.stat-card .slabel { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.stat-card .sval { font-size: 26px; font-weight: bold; }
+.stat-card .ssub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.sval.ok { color: #065F46; } .sval.warn { color: #854D0E; } .sval.danger { color: #991B1B; } .sval.info { color: #1A3C6E; }
+
+/* UNIDADES GRID */
+.unidades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.unidad-card { background: var(--card); border: 2px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+.unidad-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.unidad-card.lista { border-color: #6EE7B7; }
+.unidad-card.alerta { border-color: #FCD34D; }
+.unidad-card.critica { border-color: #FCA5A5; }
+.u-header { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+.u-header.lista { background: #DCFCE7; }
+.u-header.alerta { background: #FEF9C3; }
+.u-header.critica { background: #FEE2E2; }
+.u-nombre { font-size: 14px; font-weight: bold; }
+.u-nombre.lista { color: #065F46; } .u-nombre.alerta { color: #854D0E; } .u-nombre.critica { color: #991B1B; }
+.u-tipo { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: bold; }
+.u-tipo.ambulancia { background: #DBEAFE; color: #1E40AF; }
+.u-tipo.ataque { background: #FEE2E2; color: #991B1B; }
+.u-status { font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 4px; }
+.u-body { padding: 12px 16px; }
+.u-placas { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+.progress-bar { height: 6px; background: #E5E7EB; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.progress-fill.ok { background: #10B981; }
+.progress-fill.warn { background: #F59E0B; }
+.progress-fill.bad { background: #EF4444; }
+.checklist { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.check-item { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: background 0.1s; }
+.check-item:hover { background: var(--light); }
+.check-item input[type=checkbox] { accent-color: #065F46; width: 14px; height: 14px; cursor: pointer; }
+.check-label { flex: 1; font-size: 12px; }
+.check-label.checked { text-decoration: line-through; color: var(--muted); }
+.check-cant { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.u-footer { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* BOTONES */
+.btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; cursor: pointer; font-family: Arial; transition: all 0.15s; }
+.btn:hover { background: var(--light); }
+.btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn.primary:hover { background: #0f2a50; }
+.btn.success { background: #065F46; color: #fff; border-color: #065F46; }
+.btn.sm { padding: 4px 8px; font-size: 11px; }
+.toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.toolbar select, .toolbar input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: var(--card); color: var(--text); outline: none; }
+.spacer { flex: 1; }
+
+/* HISTORIAL */
+.table-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.table-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.table-header span { font-size: 13px; font-weight: bold; color: var(--blue); }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: var(--blue); color: #fff; font-size: 11px; font-weight: bold; padding: 9px 12px; text-align: left; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #F0F7FF; }
+tbody td { padding: 8px 12px; font-size: 12px; vertical-align: middle; }
+.empty-state { text-align: center; padding: 32px; color: var(--muted); }
+.badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
+.badge.ok { background: #DCFCE7; color: #166534; }
+.badge.warn { background: #FEF9C3; color: #854D0E; }
+.badge.bad { background: #FEE2E2; color: #991B1B; }
+.badge.blue { background: #DBEAFE; color: #1E40AF; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: flex-start; justify-content: center; padding-top: 40px; overflow-y: auto; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 12px; padding: 24px; width: 560px; max-width: 95vw; margin-bottom: 40px; }
+.modal h2 { font-size: 15px; font-weight: bold; color: var(--blue); margin-bottom: 16px; border-bottom: 2px solid var(--blue); padding-bottom: 8px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: bold; }
+.field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: Arial; color: var(--text); background: var(--card); outline: none; }
+.field input:focus, .field select:focus { border-color: var(--blue2); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+.checklist-editor { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.ce-row { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.ce-row:last-child { border-bottom: none; }
+.ce-row input { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; flex: 1; }
+.ce-row input.cant { width: 60px; flex: 0 0 60px; }
+.ce-row input.unidad { width: 60px; flex: 0 0 60px; }
+.ce-del { background: none; border: none; color: #EF4444; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+
+/* NOTIF */
+.notif { position: fixed; bottom: 20px; right: 20px; background: #065F46; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 12px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.notif.show { opacity: 1; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .unidades-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="org">Coahuayana, Michoacán</div>
+      <div class="title">Protección Civil Municipal</div>
+      <div class="sub">Control de Unidades</div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Unidades</div>
+      <div class="nav-item active" onclick="showPage('unidades',this)"><span class="nav-icon">🚑</span> Estado de unidades</div>
+      <div class="nav-item" onclick="showPage('historial',this)"><span class="nav-icon">📋</span> Historial de revisiones</div>
+      <div class="nav-section">Gestión</div>
+      <div class="nav-item" onclick="showPage('nueva',this)"><span class="nav-icon">➕</span> Nueva unidad</div>
+      <div class="nav-item" onclick="showPage('ayuda',this)"><span class="nav-icon">❓</span> Ayuda</div>
+    </div>
+    <div class="sidebar-footer">Logística y Equipamiento</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div style="background:#1A3C6E;padding:8px 16px"><a href="index.html" style="color:#BFDBFE;font-size:12px;text-decoration:none">← Inicio · PC Coahuayana</a></div>
+<div class="topbar">
+      <div class="topbar-left">
+        <h1 id="page-title">Estado de unidades</h1>
+        <p>Ataque Rápido y Ambulancias — Protección Civil Municipal</p>
+      </div>
+      <div class="topbar-right">
+        <span class="date-badge" id="fecha-hoy"></span>
+        <button class="btn success" onclick="marcarRevisionTodas()">Registrar revisión general</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- PÁGINA: UNIDADES -->
+      <div id="page-unidades">
+        <div class="stats" id="stats-cards"></div>
+        <div class="toolbar">
+          <select id="filtro-tipo" onchange="renderUnidades()">
+            <option value="">Todas las unidades</option>
+            <option value="Ambulancia">Ambulancias</option>
+            <option value="Ataque Rápido">Ataque Rápido</option>
+          </select>
+          <select id="filtro-status" onchange="renderUnidades()">
+            <option value="">Todos los estados</option>
+            <option value="lista">Lista para salir</option>
+            <option value="alerta">Con faltantes</option>
+            <option value="critica">Crítica</option>
+          </select>
+          <div class="spacer"></div>
+        </div>
+        <div class="unidades-grid" id="unidades-grid"></div>
+      </div>
+
+      <!-- PÁGINA: HISTORIAL -->
+      <div id="page-historial" style="display:none">
+        <div class="table-card">
+          <div class="table-header">
+            <span>Historial de revisiones</span>
+            <small id="historial-count"></small>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Fecha y hora</th><th>Unidad</th><th>Responsable</th><th>Estado</th><th>Artículos OK</th><th>Faltantes</th><th>Observaciones</th></tr></thead>
+              <tbody id="tbody-historial"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: NUEVA UNIDAD -->
+      <div id="page-nueva" style="display:none">
+        <div class="table-card" style="padding:24px;max-width:600px">
+          <h2 style="color:var(--blue);font-size:15px;margin-bottom:16px">Agregar nueva unidad</h2>
+          <div class="row2">
+            <div class="field"><label>Nombre de la unidad *</label><input type="text" id="nu-nombre" placeholder="Ambulancia 01"></div>
+            <div class="field"><label>Tipo *</label>
+              <select id="nu-tipo">
+                <option>Ambulancia</option>
+                <option>Ataque Rápido</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Placas</label><input type="text" id="nu-placas" placeholder="ABC-123"></div>
+            <div class="field"><label>Responsable</label><input type="text" id="nu-responsable"></div>
+          </div>
+          <div class="field"><label>Artículos del checklist (agrega todos los que debe llevar)</label></div>
+          <div class="checklist-editor" id="ce-lista"></div>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button class="btn sm" onclick="addCERow()">+ Agregar artículo</button>
+            <button class="btn sm" onclick="cargarPlantilla('Ambulancia')">Cargar plantilla Ambulancia</button>
+            <button class="btn sm" onclick="cargarPlantilla('Ataque Rápido')">Cargar plantilla Ataque Rápido</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn primary" onclick="guardarNuevaUnidad()">Guardar unidad</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PÁGINA: AYUDA -->
+      <div id="page-ayuda" style="display:none">
+        <div class="table-card" style="padding:24px;max-width:600px">
+          <h2 style="color:var(--blue);font-size:15px;margin-bottom:16px">Cómo usar esta plataforma</h2>
+          <div style="line-height:2;color:#374151;font-size:13px">
+            <p><strong>🚑 Estado de unidades</strong> — Muestra si cada unidad está lista para salir. Verde = lista, amarillo = faltantes menores, rojo = crítica.</p><br>
+            <p><strong>Revisar una unidad</strong> — Haz clic en los artículos del checklist para marcarlos como presentes. Luego pulsa "Guardar revisión" para registrar en el historial.</p><br>
+            <p><strong>Registrar revisión general</strong> — Guarda el estado actual de todas las unidades en el historial de una sola vez.</p><br>
+            <p><strong>📋 Historial</strong> — Registro completo de todas las revisiones con fecha, responsable y estado.</p><br>
+            <p><strong>➕ Nueva unidad</strong> — Agrega una nueva unidad con su propio checklist personalizado o usa las plantillas predefinidas.</p><br>
+            <p><strong>💾 Los datos se guardan en este navegador.</strong></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CHECKLIST -->
+<div class="modal-overlay" id="modal-checklist">
+  <div class="modal">
+    <h2 id="modal-checklist-titulo">Editar equipo</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Agrega o elimina artículos del checklist de esta unidad.</p>
+    <div class="checklist-editor" id="ce-edit-lista"></div>
+    <div style="margin:10px 0 16px">
+      <button class="btn sm" onclick="addCEEditRow()">+ Agregar artículo</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModalChecklist()">Cancelar</button>
+      <button class="btn primary" onclick="guardarChecklist()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-entrega">
+  <div class="modal">
+    <h2 id="modal-entrega-titulo">Entrega / Recepción de unidad</h2>
+    <div class="row2">
+      <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="ent-fecha"></div>
+      <div class="field"><label>Tipo de movimiento</label>
+        <select id="ent-tipo">
+          <option>Entrega de turno</option>
+          <option>Salida a servicio</option>
+          <option>Regreso de servicio</option>
+          <option>Entrega a mantenimiento</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Quien entrega</label><input type="text" id="ent-entrega" placeholder="Nombre completo"></div>
+      <div class="field"><label>Cargo</label><input type="text" id="ent-cargo-e" placeholder="Cargo"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Quien recibe</label><input type="text" id="ent-recibe" placeholder="Nombre completo"></div>
+      <div class="field"><label>Cargo</label><input type="text" id="ent-cargo-r" placeholder="Cargo"></div>
+    </div>
+    <div class="field"><label>Estado general al momento de entrega</label>
+      <select id="ent-estado">
+        <option>Bueno — Lista para operar</option>
+        <option>Regular — Operable con observaciones</option>
+        <option>Malo — Requiere revisión antes de operar</option>
+      </select>
+    </div>
+    <div class="field"><label>Observaciones</label><textarea id="ent-obs" rows="2" placeholder="Notas, faltantes o comentarios..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModalEntrega()">Cancelar</button>
+      <button class="btn success" onclick="guardarEntrega()">Registrar entrega</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-operador">
+  <div class="modal">
+    <h2 id="modal-op-titulo">Reporte del operador</h2>
+    <div class="row2">
+      <div class="field"><label>Operador</label><input type="text" id="op-nombre" placeholder="Nombre completo"></div>
+      <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="op-fecha"></div>
+    </div>
+    <p style="font-size:12px;font-weight:bold;color:var(--blue);margin:10px 0 8px">Niveles y condición</p>
+    <div class="row3">
+      <div class="field"><label>Combustible</label>
+        <select id="op-combustible">
+          <option>Lleno (100%)</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Vacío</option>
+        </select>
+      </div>
+      <div class="field"><label>Aceite motor</label>
+        <select id="op-aceite">
+          <option>Nivel correcto</option><option>Bajo</option><option>Muy bajo</option><option>Sin aceite</option>
+        </select>
+      </div>
+      <div class="field"><label>Agua / Refrigerante</label>
+        <select id="op-agua">
+          <option>Nivel correcto</option><option>Bajo</option><option>Muy bajo</option><option>Sin agua</option>
+        </select>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Llantas</label>
+        <select id="op-llantas">
+          <option>Buenas</option><option>Regular</option><option>Requieren cambio</option>
+        </select>
+      </div>
+      <div class="field"><label>Frenos</label>
+        <select id="op-frenos">
+          <option>Funcionando bien</option><option>Con ruido</option><option>Falla detectada</option>
+        </select>
+      </div>
+      <div class="field"><label>Luces</label>
+        <select id="op-luces">
+          <option>Funcionando</option><option>Falla parcial</option><option>Sin luz</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Kilometraje actual</label><input type="number" id="op-km" placeholder="Ej. 45200" min="0"></div>
+    <div class="field"><label>¿Tiene alguna falla o problema?</label>
+      <select id="op-tiene-falla" onchange="toggleFalla()">
+        <option value="no">No — La unidad está en buen estado</option>
+        <option value="si">Sí — Reportar falla</option>
+      </select>
+    </div>
+    <div id="op-falla-detalle" style="display:none">
+      <div class="field"><label>Descripción de la falla</label><textarea id="op-falla" rows="2" placeholder="Describe el problema detectado..."></textarea></div>
+      <div class="field"><label>Gravedad</label>
+        <select id="op-gravedad">
+          <option value="leve">Leve — Puede seguir operando</option>
+          <option value="moderada">Moderada — Requiere revisión pronto</option>
+          <option value="grave">Grave — No debe operar hasta reparar</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Observaciones adicionales</label><textarea id="op-obs" rows="2"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModalOperador()">Cancelar</button>
+      <button class="btn success" onclick="guardarReporteOperador()">Guardar reporte</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-titulo">Revisión de unidad</h2>
+    <div class="row2">
+      <div class="field"><label>Responsable de revisión</label><input type="text" id="rev-responsable"></div>
+      <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="rev-fecha"></div>
+    </div>
+    <div class="field"><label>Observaciones</label><input type="text" id="rev-obs" placeholder="Notas adicionales..."></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn success" onclick="guardarRevision()">Guardar revisión</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const KEY_U = 'pcm_unidades';
+const KEY_H = 'pcm_historial_u';
+
+let unidades = [];
+let historial = [];
+let revUnidadId = null;
+
+const PLANTILLAS = {
+  'Ambulancia': [
+    {nombre:'Camilla plegable', cant:1, unidad:'Pza'},
+    {nombre:'Desfibrilador', cant:1, unidad:'Pza'},
+    {nombre:'Oxígeno (tanque)', cant:2, unidad:'Pza'},
+    {nombre:'Mascarilla de oxígeno', cant:4, unidad:'Pza'},
+    {nombre:'Collarín cervical', cant:3, unidad:'Pza'},
+    {nombre:'Botiquín de primeros auxilios', cant:1, unidad:'Pza'},
+    {nombre:'Férula de tracción', cant:1, unidad:'Pza'},
+    {nombre:'Tabla espinal', cant:1, unidad:'Pza'},
+    {nombre:'Guantes desechables', cant:20, unidad:'Par'},
+    {nombre:'Vendas', cant:10, unidad:'Pza'},
+    {nombre:'Linterna', cant:2, unidad:'Pza'},
+    {nombre:'Radio de comunicación', cant:1, unidad:'Pza'},
+  ],
+  'Ataque Rápido': [
+    {nombre:'Extinguidor PQS 6kg', cant:2, unidad:'Pza'},
+    {nombre:'Manguera 38mm (30m)', cant:1, unidad:'Pza'},
+    {nombre:'Manguera 25mm (20m)', cant:1, unidad:'Pza'},
+    {nombre:'Lanza boquilla', cant:2, unidad:'Pza'},
+    {nombre:'Hacha de incendios', cant:2, unidad:'Pza'},
+    {nombre:'Casco bombero', cant:3, unidad:'Pza'},
+    {nombre:'Traje de aproximación', cant:2, unidad:'Pza'},
+    {nombre:'Máscara respiratoria', cant:2, unidad:'Pza'},
+    {nombre:'Equipo de rescate hidráulico', cant:1, unidad:'Pza'},
+    {nombre:'Cuerda de rescate', cant:2, unidad:'Pza'},
+    {nombre:'Radio de comunicación', cant:2, unidad:'Pza'},
+    {nombre:'Linterna táctica', cant:3, unidad:'Pza'},
+  ]
+};
+
+const DEFAULTS = [
+  {id:1, nombre:'Ambulancia 1727', tipo:'Ambulancia', placas:'1727', responsable:'Responsable de área',
+   items: PLANTILLAS['Ambulancia'].map((a,i)=>({...a, id:i+1, ok:true}))},
+  {id:2, nombre:'Ataque Rápido RAM 1500', tipo:'Ataque Rápido', placas:'RAM 1500', responsable:'Responsable de área',
+   items: [
+     ...PLANTILLAS['Ataque Rápido'].map((a,i)=>({...a, id:i+1, ok:true})),
+     {id:20, nombre:'Cisterna', cant:1, unidad:'Pza', ok:true},
+     {id:21, nombre:'Motor (bomba de agua)', cant:1, unidad:'Pza', ok:true},
+   ]},
+];
+
+let nextUId = 10, nextIId = 100;
+
+function cargar() {
+  try {
+    const u = localStorage.getItem(KEY_U);
+    if (u) { const p=JSON.parse(u); unidades=p.unidades; nextUId=p.nextUId||10; nextIId=p.nextIId||100; }
+    else unidades = JSON.parse(JSON.stringify(DEFAULTS));
+    const h = localStorage.getItem(KEY_H);
+    if (h) historial = JSON.parse(h);
+  } catch(e) { unidades = JSON.parse(JSON.stringify(DEFAULTS)); }
+}
+
+function guardar() {
+  try {
+    localStorage.setItem(KEY_U, JSON.stringify({unidades, nextUId, nextIId}));
+    localStorage.setItem(KEY_H, JSON.stringify(historial));
+  } catch(e) {}
+}
+
+function notif(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = '✓ ' + msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2200);
+}
+
+function statusUnidad(u) {
+  const total = u.items.length;
+  const ok = u.items.filter(i=>i.ok).length;
+  const pct = total ? Math.round(ok/total*100) : 100;
+  if (pct === 100) return 'lista';
+  if (pct >= 75) return 'alerta';
+  return 'critica';
+}
+
+function statusLabel(s) {
+  if (s==='lista') return '✔ Lista para salir';
+  if (s==='alerta') return '⚠ Faltantes menores';
+  return '✘ Atención urgente';
+}
+
+function renderStats() {
+  const total = unidades.length;
+  const listas = unidades.filter(u=>statusUnidad(u)==='lista').length;
+  const alerta = unidades.filter(u=>statusUnidad(u)==='alerta').length;
+  const critica = unidades.filter(u=>statusUnidad(u)==='critica').length;
+  document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card"><div class="slabel">Total unidades</div><div class="sval info">${total}</div><div class="ssub">registradas</div></div>
+    <div class="stat-card"><div class="slabel">Listas para salir</div><div class="sval ok">${listas}</div><div class="ssub">al 100%</div></div>
+    <div class="stat-card"><div class="slabel">Con faltantes</div><div class="sval warn">${alerta}</div><div class="ssub">revisar</div></div>
+    <div class="stat-card"><div class="slabel">Críticas</div><div class="sval danger">${critica}</div><div class="ssub">atención urgente</div></div>
+  `;
+}
+
+function renderUnidades() {
+  const ft = document.getElementById('filtro-tipo').value;
+  const fs = document.getElementById('filtro-status').value;
+  let list = unidades.filter(u => {
+    if (ft && u.tipo !== ft) return false;
+    if (fs && statusUnidad(u) !== fs) return false;
+    return true;
+  });
+  const grid = document.getElementById('unidades-grid');
+  if (!list.length) { grid.innerHTML = '<p style="color:var(--muted);padding:20px">Sin unidades con ese filtro.</p>'; return; }
+  grid.innerHTML = list.map(u => {
+    const st = statusUnidad(u);
+    const total = u.items.length;
+    const ok = u.items.filter(i=>i.ok).length;
+    const pct = total ? Math.round(ok/total*100) : 100;
+    const faltantes = u.items.filter(i=>!i.ok);
+    const pfill = pct===100?'ok':pct>=75?'warn':'bad';
+    const checks = u.items.map(item => `
+      <div class="check-item" onclick="toggleItem(${u.id},${item.id})">
+        <input type="checkbox" ${item.ok?'checked':''} onclick="event.stopPropagation();toggleItem(${u.id},${item.id})">
+        <span class="check-label ${item.ok?'checked':''}">${item.nombre}</span>
+        <span class="check-cant">${item.cant} ${item.unidad}</span>
+      </div>`).join('');
+    return `
+      <div class="unidad-card ${st}">
+        <div class="u-header ${st}">
+          <div>
+            <div class="u-nombre ${st}">${u.nombre}</div>
+            <div style="font-size:11px;color:#6B7280;margin-top:2px">${u.placas} · ${u.responsable}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span class="u-tipo ${u.tipo==='Ambulancia'?'ambulancia':'ataque'}">${u.tipo}</span>
+            <span class="u-status" style="color:${st==='lista'?'#065F46':st==='alerta'?'#854D0E':'#991B1B'}">${statusLabel(st)}</span>
+          </div>
+        </div>
+        <div class="u-body">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+            <span>${ok} de ${total} artículos presentes</span><span style="font-weight:bold">${pct}%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill ${pfill}" style="width:${pct}%"></div></div>
+          ${faltantes.length ? `<div style="font-size:11px;color:#991B1B;margin-bottom:6px;font-weight:bold">Falta: ${faltantes.map(f=>f.nombre).join(', ')}</div>` : ''}
+          <div class="checklist">${checks}</div>
+        </div>
+        <div class="u-footer">
+          <button class="btn sm" onclick="abrirEditarChecklist(${u.id})">✏ Editar equipo</button>
+          <button class="btn sm" onclick="abrirEntrega(${u.id})">🔄 Entrega / Recepción</button>
+          <button class="btn sm" onclick="abrirOperador(${u.id})">🔧 Reporte operador</button>
+          <button class="btn sm primary" onclick="marcarTodo(${u.id})">✔ Marcar todo</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleItem(uid, iid) {
+  const u = unidades.find(u=>u.id===uid);
+  const item = u.items.find(i=>i.id===iid);
+  item.ok = !item.ok;
+  guardar(); renderStats(); renderUnidades();
+}
+
+function marcarTodo(uid) {
+  const u = unidades.find(u=>u.id===uid);
+  u.items.forEach(i=>i.ok=true);
+  guardar(); renderStats(); renderUnidades(); notif('Todos los artículos marcados');
+}
+
+function abrirRevision(uid) {
+  revUnidadId = uid;
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('rev-fecha').value = local;
+  document.getElementById('rev-responsable').value = '';
+  document.getElementById('rev-obs').value = '';
+  document.getElementById('modal-titulo').textContent = 'Guardar revisión — ' + unidades.find(u=>u.id===uid).nombre;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function cerrarModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function guardarRevision() {
+  const u = unidades.find(u=>u.id===revUnidadId);
+  const ok = u.items.filter(i=>i.ok).length;
+  const faltantes = u.items.filter(i=>!i.ok).map(i=>i.nombre).join(', ');
+  historial.push({
+    fecha: document.getElementById('rev-fecha').value,
+    unidad: u.nombre,
+    responsable: document.getElementById('rev-responsable').value || 'Sin especificar',
+    estado: statusLabel(statusUnidad(u)),
+    ok: ok + ' / ' + u.items.length,
+    faltantes: faltantes || 'Ninguno',
+    obs: document.getElementById('rev-obs').value,
+  });
+  guardar(); cerrarModal(); notif('Revisión guardada en historial');
+}
+
+function marcarRevisionTodas() {
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  unidades.forEach(u => {
+    const ok = u.items.filter(i=>i.ok).length;
+    const faltantes = u.items.filter(i=>!i.ok).map(i=>i.nombre).join(', ');
+    historial.push({
+      fecha: local, unidad: u.nombre, responsable: 'Revisión general',
+      estado: statusLabel(statusUnidad(u)),
+      ok: ok + ' / ' + u.items.length,
+      faltantes: faltantes || 'Ninguno', obs: 'Revisión general automática',
+    });
+  });
+  guardar(); notif('Revisión general registrada para ' + unidades.length + ' unidades');
+}
+
+function renderHistorial() {
+  const tbody = document.getElementById('tbody-historial');
+  document.getElementById('historial-count').textContent = historial.length + ' registros';
+  if (!historial.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Sin revisiones registradas</td></tr>'; return; }
+  tbody.innerHTML = [...historial].reverse().map(h => {
+    const sc = h.estado.includes('Lista') ? 'ok' : h.estado.includes('menores') ? 'warn' : 'bad';
+    return `<tr>
+      <td>${h.fecha}</td>
+      <td><b>${h.unidad}</b></td>
+      <td>${h.responsable}</td>
+      <td><span class="badge ${sc}">${h.estado}</span></td>
+      <td>${h.ok}</td>
+      <td style="color:${h.faltantes==='Ninguno'?'#065F46':'#991B1B'}">${h.faltantes}</td>
+      <td>${h.obs}</td>
+    </tr>`;
+  }).join('');
+}
+
+// NUEVA UNIDAD
+let ceItems = [];
+function addCERow(nombre='', cant=1, unidad='Pza') {
+  const id = Date.now() + Math.random();
+  ceItems.push({id, nombre, cant, unidad});
+  renderCE();
+}
+function delCERow(id) { ceItems = ceItems.filter(i=>i.id!==id); renderCE(); }
+function renderCE() {
+  document.getElementById('ce-lista').innerHTML = ceItems.map(item => `
+    <div class="ce-row">
+      <input type="text" value="${item.nombre}" placeholder="Nombre del artículo" onchange="updateCE(${item.id},'nombre',this.value)" style="flex:1">
+      <input type="number" value="${item.cant}" min="1" class="cant" onchange="updateCE(${item.id},'cant',+this.value)">
+      <input type="text" value="${item.unidad}" class="unidad" onchange="updateCE(${item.id},'unidad',this.value)">
+      <button class="ce-del" onclick="delCERow(${item.id})">✕</button>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px">Agrega artículos o carga una plantilla</div>';
+}
+function updateCE(id, field, val) { const i=ceItems.find(i=>i.id===id); if(i) i[field]=val; }
+function cargarPlantilla(tipo) { ceItems = PLANTILLAS[tipo].map((a,i)=>({...a,id:i+Date.now()})); renderCE(); }
+function guardarNuevaUnidad() {
+  const nombre = document.getElementById('nu-nombre').value.trim();
+  const tipo = document.getElementById('nu-tipo').value;
+  const placas = document.getElementById('nu-placas').value.trim();
+  const responsable = document.getElementById('nu-responsable').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  unidades.push({
+    id: nextUId++, nombre, tipo, placas, responsable,
+    items: ceItems.map((i,idx)=>({id:nextIId++, nombre:i.nombre, cant:i.cant, unidad:i.unidad, ok:false}))
+  });
+  guardar(); notif('Unidad guardada'); ceItems=[];
+  document.getElementById('nu-nombre').value=''; document.getElementById('nu-placas').value=''; document.getElementById('nu-responsable').value='';
+  renderCE(); showPage('unidades', document.querySelector('.nav-item'));
+}
+
+function showPage(page, el) {
+  ['unidades','historial','nueva','ayuda'].forEach(p => {
+    document.getElementById('page-'+p).style.display = p===page?'':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = {unidades:'Estado de unidades',historial:'Historial de revisiones',nueva:'Agregar nueva unidad',ayuda:'Ayuda'};
+  document.getElementById('page-title').textContent = titles[page];
+  if (page==='historial') renderHistorial();
+  if (page==='unidades') { renderStats(); renderUnidades(); }
+}
+
+let ceEditItems = [];
+let ceEditUid = null;
+
+function abrirEditarChecklist(uid) {
+  ceEditUid = uid;
+  const u = unidades.find(u=>u.id===uid);
+  ceEditItems = u.items.map(i=>({...i}));
+  document.getElementById('modal-checklist-titulo').textContent = 'Editar equipo — ' + u.nombre;
+  renderCEEdit();
+  document.getElementById('modal-checklist').classList.add('open');
+}
+
+function cerrarModalChecklist() {
+  document.getElementById('modal-checklist').classList.remove('open');
+}
+
+function addCEEditRow() {
+  ceEditItems.push({id: Date.now(), nombre:'', cant:1, unidad:'Pza', ok:false});
+  renderCEEdit();
+}
+
+function delCEEditRow(id) {
+  ceEditItems = ceEditItems.filter(i=>i.id!==id);
+  renderCEEdit();
+}
+
+function updateCEEdit(id, field, val) {
+  const item = ceEditItems.find(i=>i.id===id);
+  if (item) item[field] = val;
+}
+
+function renderCEEdit() {
+  document.getElementById('ce-edit-lista').innerHTML = ceEditItems.map(item => `
+    <div class="ce-row">
+      <input type="text" value="${item.nombre}" placeholder="Nombre del artículo"
+        onchange="updateCEEdit(${item.id},'nombre',this.value)" style="flex:1">
+      <input type="number" value="${item.cant}" min="1" class="cant"
+        onchange="updateCEEdit(${item.id},'cant',+this.value)">
+      <input type="text" value="${item.unidad}" class="unidad"
+        onchange="updateCEEdit(${item.id},'unidad',this.value)">
+      <button class="ce-del" onclick="delCEEditRow(${item.id})">✕</button>
+    </div>`).join('') || '<div style="padding:12px;color:var(--muted);font-size:12px">Sin artículos. Agrega uno.</div>';
+}
+
+function guardarChecklist() {
+  const u = unidades.find(u=>u.id===ceEditUid);
+  u.items = ceEditItems.filter(i=>i.nombre.trim()!=='');
+  guardar(); cerrarModalChecklist(); renderStats(); renderUnidades();
+  notif('Checklist actualizado');
+}
+
+document.getElementById('modal-checklist').addEventListener('click',function(e){ if(e.target===this) cerrarModalChecklist(); });
+
+document.getElementById('modal-overlay').addEventListener('click',function(e){ if(e.target===this) cerrarModal(); });
+
+const hoy = new Date();
+document.getElementById('fecha-hoy').textContent = hoy.toLocaleDateString('es-MX',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+
+// ── ENTREGA / RECEPCIÓN ──────────────────────────
+let entUid = null;
+function abrirEntrega(uid) {
+  entUid = uid;
+  const u = unidades.find(u=>u.id===uid);
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('modal-entrega-titulo').textContent = 'Entrega / Recepción — ' + u.nombre;
+  document.getElementById('ent-fecha').value = local;
+  document.getElementById('ent-entrega').value = '';
+  document.getElementById('ent-recibe').value = '';
+  document.getElementById('ent-cargo-e').value = '';
+  document.getElementById('ent-cargo-r').value = '';
+  document.getElementById('ent-obs').value = '';
+  document.getElementById('modal-entrega').classList.add('open');
+}
+function cerrarModalEntrega() { document.getElementById('modal-entrega').classList.remove('open'); }
+function guardarEntrega() {
+  const u = unidades.find(u=>u.id===entUid);
+  historial.push({
+    fecha: document.getElementById('ent-fecha').value,
+    unidad: u.nombre,
+    responsable: document.getElementById('ent-entrega').value || '—',
+    estado: '🔄 ' + document.getElementById('ent-tipo').value,
+    ok: 'Entrega: ' + (document.getElementById('ent-entrega').value||'—') + ' → Recibe: ' + (document.getElementById('ent-recibe').value||'—'),
+    faltantes: document.getElementById('ent-estado').value,
+    obs: document.getElementById('ent-obs').value,
+  });
+  guardar(); cerrarModalEntrega(); notif('Entrega registrada');
+}
+document.getElementById('modal-entrega').addEventListener('click',function(e){ if(e.target===this) cerrarModalEntrega(); });
+
+// ── REPORTE OPERADOR ──────────────────────────────
+let opUid = null;
+function abrirOperador(uid) {
+  opUid = uid;
+  const u = unidades.find(u=>u.id===uid);
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('modal-op-titulo').textContent = 'Reporte del operador — ' + u.nombre;
+  document.getElementById('op-fecha').value = local;
+  document.getElementById('op-nombre').value = '';
+  document.getElementById('op-km').value = '';
+  document.getElementById('op-obs').value = '';
+  document.getElementById('op-tiene-falla').value = 'no';
+  document.getElementById('op-falla-detalle').style.display = 'none';
+  document.getElementById('modal-operador').classList.add('open');
+}
+function cerrarModalOperador() { document.getElementById('modal-operador').classList.remove('open'); }
+function toggleFalla() {
+  const val = document.getElementById('op-tiene-falla').value;
+  document.getElementById('op-falla-detalle').style.display = val==='si' ? '' : 'none';
+}
+function guardarReporteOperador() {
+  const u = unidades.find(u=>u.id===opUid);
+  const tieneFalla = document.getElementById('op-tiene-falla').value === 'si';
+  const gravedad = tieneFalla ? document.getElementById('op-gravedad').value : null;
+  const niveles = [
+    'Combustible: ' + document.getElementById('op-combustible').value,
+    'Aceite: ' + document.getElementById('op-aceite').value,
+    'Agua: ' + document.getElementById('op-agua').value,
+    'Llantas: ' + document.getElementById('op-llantas').value,
+    'Frenos: ' + document.getElementById('op-frenos').value,
+    'Luces: ' + document.getElementById('op-luces').value,
+  ].join(' | ');
+  const falla = tieneFalla ? document.getElementById('op-falla').value : 'Sin fallas';
+  const estadoLabel = !tieneFalla ? '✔ Sin fallas' : gravedad==='leve' ? '⚠ Falla leve' : gravedad==='moderada' ? '⚠ Falla moderada' : '✘ Falla grave';
+  if (tieneFalla && gravedad==='grave') {
+    u.items.forEach(i => {
+      if (i.nombre.toLowerCase().includes('motor') || i.nombre.toLowerCase().includes('llanta') || i.nombre.toLowerCase().includes('freno')) i.ok = false;
+    });
+  }
+  historial.push({
+    fecha: document.getElementById('op-fecha').value,
+    unidad: u.nombre,
+    responsable: document.getElementById('op-nombre').value || 'Operador',
+    estado: estadoLabel,
+    ok: 'Km: ' + (document.getElementById('op-km').value||'—'),
+    faltantes: niveles,
+    obs: falla + (document.getElementById('op-obs').value ? ' | ' + document.getElementById('op-obs').value : ''),
+  });
+  guardar(); cerrarModalOperador(); renderStats(); renderUnidades();
+  notif(tieneFalla && gravedad==='grave' ? '⚠ Falla grave registrada' : 'Reporte de operador guardado');
+}
+document.getElementById('modal-operador').addEventListener('click',function(e){ if(e.target===this) cerrarModalOperador(); });
+
+cargar();
+renderStats();
+renderUnidades();
+renderCE();
+</script>
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+</body>
+</html>
